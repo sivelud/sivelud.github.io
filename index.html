@@ -48,16 +48,25 @@
         label {
             font-size: 18px;
         }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div>
+            <button id="prevPageBtn" onclick="changePage(-1)">Previous Page</button>
             <label for="pageSelector">Choose a page:</label>
             <select id="pageSelector" onchange="updateContent()">
                 <!-- Options will be added here -->
             </select>
+            <button id="nextPageBtn" onclick="changePage(1)">Next Page</button>
         </div>
 
         <div class="pdf-page-with-audio">
@@ -69,18 +78,32 @@
         </div>
 
         <script>
+            var currentPage = 1;
+            var totalPages = 792; // Adjust this number to the total number of your pages
+
             function updateContent() {
                 var selectedPage = document.getElementById("pageSelector").value;
-                document.getElementById("pdfViewer").src = "pdf_pages/page_" + selectedPage + ".pdf";
-                document.getElementById("audioPlayer").children[0].src = "audio_pages/page_" + selectedPage + ".mp3";
+                currentPage = parseInt(selectedPage, 10);
+                updateSources();
+            }
+
+            function changePage(delta) {
+                currentPage += delta;
+                if (currentPage < 1) currentPage = 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+                document.getElementById("pageSelector").value = currentPage;
+                updateSources();
+            }
+
+            function updateSources() {
+                document.getElementById("pdfViewer").src = "pdf_pages/page_" + currentPage + ".pdf";
+                document.getElementById("audioPlayer").children[0].src = "audio_pages/page_" + currentPage + ".mp3";
                 document.getElementById("audioPlayer").load(); // Reload the audio player to apply new source
             }
 
-            // Populate the dropdown with options
             window.onload = function() {
                 var pageSelector = document.getElementById("pageSelector");
-                var totalPages = 792; // Adjust this number to the total number of your pages
-
+                
                 for (var i = 1; i <= totalPages; i++) {
                     var option = document.createElement("option");
                     option.value = i;
