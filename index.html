@@ -1,7 +1,54 @@
-<div class="pdf-page-with-audio">
-    <embed src="pdf_pages/page_68.pdf" type="application/pdf" width="1920" height="1080"></embed>
-    <audio controls>
-        <source src="audio_pages/page_68.mp3" type="audio/mpeg">
-        Your browser does not support the audio element.
-    </audio>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Page Viewer with Audio</title>
+    <style>
+        .pdf-page-with-audio {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div>
+        <label for="pageSelector">Choose a page:</label>
+        <select id="pageSelector" onchange="updateContent()">
+            <!-- Options will be added here -->
+        </select>
+    </div>
+
+    <div class="pdf-page-with-audio">
+        <audio controls id="audioPlayer">
+            <source src="audio_pages/page_1.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <embed src="pdf_pages/page_1.pdf" type="application/pdf" width="1920" height="1080" id="pdfViewer"></embed>
+    </div>
+
+    <script>
+        function updateContent() {
+            var selectedPage = document.getElementById("pageSelector").value;
+            document.getElementById("pdfViewer").src = "pdf_pages/page_" + selectedPage + ".pdf";
+            document.getElementById("audioPlayer").children[0].src = "audio_pages/page_" + selectedPage + ".mp3";
+            document.getElementById("audioPlayer").load(); // Reload the audio player to apply new source
+        }
+
+        // Populate the dropdown with options
+        window.onload = function() {
+            var pageSelector = document.getElementById("pageSelector");
+            var totalPages = 100; // Adjust this number to the total number of your pages
+
+            for (var i = 1; i <= totalPages; i++) {
+                var option = document.createElement("option");
+                option.value = i;
+                option.text = "Page " + i;
+                pageSelector.appendChild(option);
+            }
+        }
+    </script>
+
+</body>
+</html>
