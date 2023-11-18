@@ -25,10 +25,9 @@
             margin-top: 20px;
         }
 
-        select {
+        select, button, label, input[type="checkbox"] {
             padding: 10px;
-            margin-top: 20px;
-            width: 200px;
+            margin: 5px;
             font-size: 16px;
         }
 
@@ -44,17 +43,6 @@
             max-width: 1920px;
             height: 1080px; /* Adjust height as needed */
         }
-
-        label {
-            font-size: 18px;
-        }
-
-        button {
-            padding: 10px 15px;
-            margin: 5px;
-            font-size: 16px;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -69,16 +57,21 @@
             <button id="nextPageBtn" onclick="changePage(1)">Next Page</button>
         </div>
 
+        <div>
+            <input type="checkbox" id="autoNextCheckbox">
+            <label for="autoNextCheckbox">Auto-advance to next page when audio ends</label>
+        </div>
+
         <div class="pdf-page-with-audio">
             <audio controls id="audioPlayer">
-                <source src="audio_pages/page_1.mp3" type="audio/mpeg">
+                <source src="audio_pages/page_29.mp3" type="audio/mpeg">
                 Your browser does not support the audio element.
             </audio>
-            <embed src="pdf_pages/page_1.pdf" type="application/pdf" width="1920" height="1080" id="pdfViewer"></embed>
+            <embed src="pdf_pages/page_29.pdf" type="application/pdf" width="1920" height="1080" id="pdfViewer"></embed>
         </div>
 
         <script>
-            var currentPage = 1;
+            var currentPage = 29; // Set the initial page to 29
             var totalPages = 792; // Adjust this number to the total number of your pages
 
             function updateContent() {
@@ -101,6 +94,16 @@
                 document.getElementById("audioPlayer").load(); // Reload the audio player to apply new source
             }
 
+            function setupAudioAutoAdvance() {
+                var audioPlayer = document.getElementById("audioPlayer");
+                audioPlayer.onended = function() {
+                    if (document.getElementById("autoNextCheckbox").checked && currentPage < totalPages) {
+                        changePage(1);
+                        audioPlayer.play(); // Start playing the next audio file automatically
+                    }
+                };
+            }
+
             window.onload = function() {
                 var pageSelector = document.getElementById("pageSelector");
                 
@@ -108,8 +111,14 @@
                     var option = document.createElement("option");
                     option.value = i;
                     option.text = "Page " + i;
+                    if (i === currentPage) {
+                        option.selected = true; // Mark page 29 as selected in the dropdown
+                    }
                     pageSelector.appendChild(option);
                 }
+
+                updateSources(); // Update sources to load page 29 contents
+                setupAudioAutoAdvance();
             }
         </script>
     </div>
