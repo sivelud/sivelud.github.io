@@ -5,50 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF Page Viewer with Audio</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
         .pdf-page-with-audio {
             text-align: center;
             margin-top: 20px;
+        }
+
+        select {
+            padding: 10px;
+            margin-top: 20px;
+            width: 200px;
+            font-size: 16px;
+        }
+
+        audio {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 600px; /* Adjust based on your preference */
+        }
+
+        embed {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 1920px;
+            height: 1080px; /* Adjust height as needed */
+        }
+
+        label {
+            font-size: 18px;
         }
     </style>
 </head>
 <body>
 
-    <div>
-        <label for="pageSelector">Choose a page:</label>
-        <select id="pageSelector" onchange="updateContent()">
-            <!-- Options will be added here -->
-        </select>
-    </div>
+    <div class="container">
+        <div>
+            <label for="pageSelector">Choose a page:</label>
+            <select id="pageSelector" onchange="updateContent()">
+                <!-- Options will be added here -->
+            </select>
+        </div>
 
-    <div class="pdf-page-with-audio">
-        <audio controls id="audioPlayer">
-            <source src="audio_pages/page_1.mp3" type="audio/mpeg">
-            Your browser does not support the audio element.
-        </audio>
-        <embed src="pdf_pages/page_1.pdf" type="application/pdf" width="1920" height="1080" id="pdfViewer"></embed>
-    </div>
+        <div class="pdf-page-with-audio">
+            <audio controls id="audioPlayer">
+                <source src="audio_pages/page_1.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <embed src="pdf_pages/page_1.pdf" type="application/pdf" width="1920" height="1080" id="pdfViewer"></embed>
+        </div>
 
-    <script>
-        function updateContent() {
-            var selectedPage = document.getElementById("pageSelector").value;
-            document.getElementById("pdfViewer").src = "pdf_pages/page_" + selectedPage + ".pdf";
-            document.getElementById("audioPlayer").children[0].src = "audio_pages/page_" + selectedPage + ".mp3";
-            document.getElementById("audioPlayer").load(); // Reload the audio player to apply new source
-        }
-
-        // Populate the dropdown with options
-        window.onload = function() {
-            var pageSelector = document.getElementById("pageSelector");
-            var totalPages = 100; // Adjust this number to the total number of your pages
-
-            for (var i = 1; i <= totalPages; i++) {
-                var option = document.createElement("option");
-                option.value = i;
-                option.text = "Page " + i;
-                pageSelector.appendChild(option);
+        <script>
+            function updateContent() {
+                var selectedPage = document.getElementById("pageSelector").value;
+                document.getElementById("pdfViewer").src = "pdf_pages/page_" + selectedPage + ".pdf";
+                document.getElementById("audioPlayer").children[0].src = "audio_pages/page_" + selectedPage + ".mp3";
+                document.getElementById("audioPlayer").load(); // Reload the audio player to apply new source
             }
-        }
-    </script>
+
+            // Populate the dropdown with options
+            window.onload = function() {
+                var pageSelector = document.getElementById("pageSelector");
+                var totalPages = 792; // Adjust this number to the total number of your pages
+
+                for (var i = 1; i <= totalPages; i++) {
+                    var option = document.createElement("option");
+                    option.value = i;
+                    option.text = "Page " + i;
+                    pageSelector.appendChild(option);
+                }
+            }
+        </script>
+    </div>
 
 </body>
 </html>
