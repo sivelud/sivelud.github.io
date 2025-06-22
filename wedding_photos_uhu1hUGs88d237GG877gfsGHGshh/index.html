@@ -1,43 +1,59 @@
-<script>
-  const containerUrl = "https://weddingphotos.blob.core.windows.net/uploads";
-  const sasToken = "?sv=2024-11-04&ss=b&srt=co&sp=wlcf&se=2025-07-27T19:23:06Z&st=2025-06-22T11:23:06Z&spr=https&sig=N2g7OEn1gv4eCh4gye1eVufZfzdcs%2Fy3aYElVZOkeZE%3D";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Upload Wedding Photos</title>
+</head>
+<body>
+  <h1>Upload Your Wedding Photos</h1>
 
-  const MAX_FILES = 15;
-  const MAX_FILE_SIZE_MB = 5;
+  <input type="file" id="fileInput" multiple>
+  <button onclick="uploadFiles()">Upload</button>
 
-  async function uploadFiles() {
-    const files = document.getElementById("fileInput").files;
-    const status = document.getElementById("status");
-    status.innerText = "";
+  <pre id="status"></pre>
 
-    if (files.length === 0) {
-      status.innerText = "No files selected.";
-      return;
-    }
+  <script>
+    const containerUrl = "https://weddingphotos.blob.core.windows.net/uploads";
+    const sasToken = "?sv=2024-11-04&ss=b&srt=co&sp=wlcf&se=2025-07-27T19:23:06Z&st=2025-06-22T11:23:06Z&spr=https&sig=N2g7OEn1gv4eCh4gye1eVufZfzdcs/y3aYElVZOkeZE=";
 
-    if (files.length > MAX_FILES) {
-      status.innerText = `❌ You selected ${files.length} files. Maximum allowed is ${MAX_FILES}.`;
-      return;
-    }
+    const MAX_FILES = 15;
+    const MAX_FILE_SIZE_MB = 5;
 
-    for (const file of files) {
-      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        status.innerText += `❌ ${file.name} is too large (max ${MAX_FILE_SIZE_MB} MB).\n`;
-        continue;
+    async function uploadFiles() {
+      const files = document.getElementById("fileInput").files;
+      const status = document.getElementById("status");
+      status.innerText = "";
+
+      if (files.length === 0) {
+        status.innerText = "No files selected.";
+        return;
       }
 
-      const uploadUrl = `${containerUrl}/${encodeURIComponent(file.name)}${sasToken}`;
-      const response = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "x-ms-blob-type": "BlockBlob" },
-        body: file
-      });
+      if (files.length > MAX_FILES) {
+        status.innerText = `❌ You selected ${files.length} files. Maximum allowed is ${MAX_FILES}.`;
+        return;
+      }
 
-      if (response.ok) {
-        status.innerText += `✅ Uploaded: ${file.name}\n`;
-      } else {
-        status.innerText += `❌ Failed to upload: ${file.name}\n`;
+      for (const file of files) {
+        if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+          status.innerText += `❌ ${file.name} is too large (max ${MAX_FILE_SIZE_MB} MB).\n`;
+          continue;
+        }
+
+        const uploadUrl = `${containerUrl}/${encodeURIComponent(file.name)}${sasToken}`;
+        const response = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "x-ms-blob-type": "BlockBlob" },
+          body: file
+        });
+
+        if (response.ok) {
+          status.innerText += `✅ Uploaded: ${file.name}\n`;
+        } else {
+          status.innerText += `❌ Failed to upload: ${file.name}\n`;
+        }
       }
     }
-  }
-</script>
+  </script>
+</body>
+</html>
