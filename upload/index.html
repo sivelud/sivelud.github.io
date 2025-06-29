@@ -38,7 +38,7 @@
       object-fit: cover;
       border-radius: 4px;
     }
-    .file-box button {
+    .file-box button.remove-btn {
       position: absolute;
       top: -5px;
       right: -5px;
@@ -115,7 +115,7 @@
       const newFiles = Array.from(fileInput.files);
       selectedFiles.push(...newFiles);
       updatePreview();
-      fileInput.value = ""; // allow selecting same file again
+      fileInput.value = ""; // allow reselecting same file
     });
 
     function updatePreview() {
@@ -123,15 +123,25 @@
       selectedFiles.forEach((file, index) => {
         const box = document.createElement("div");
         box.className = "file-box";
+
         const reader = new FileReader();
         reader.onload = e => {
-          box.innerHTML = `
-            <button onclick="removeFile(${index})">×</button>
-            <img src="${e.target.result}" alt="thumb" />
-            <div>${file.name}</div>
-          `;
+          const img = document.createElement("img");
+          img.src = e.target.result;
+          box.appendChild(img);
         };
         reader.readAsDataURL(file);
+
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "remove-btn";
+        removeBtn.textContent = "×";
+        removeBtn.onclick = () => removeFile(index);
+        box.appendChild(removeBtn);
+
+        const label = document.createElement("div");
+        label.textContent = file.name;
+        box.appendChild(label);
+
         preview.appendChild(box);
       });
     }
@@ -150,7 +160,9 @@
       document.getElementById("status").textContent = "📡 Uploading...";
 
       let remaining = selectedFiles.length;
-      selectedFiles.forEach((file, index) => {
+      const toUpload = [...selectedFiles];
+
+      toUpload.forEach((file) => {
         const uploadUrl = `${BLOB_BASE.replace(/\/$/, "")}/${CONTAINER}/${encodeURIComponent(file.name)}?${SAS_TOKEN}`;
         fetch(uploadUrl, {
           method: "PUT",
@@ -162,7 +174,8 @@
         })
         .then(res => {
           if (res.ok) {
-            selectedFiles.splice(index, 1);
+            const index = selectedFiles.indexOf(file);
+            if (index !== -1) selectedFiles.splice(index, 1);
             updatePreview();
             remaining--;
             if (remaining === 0) {
