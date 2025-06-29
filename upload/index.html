@@ -1,19 +1,65 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Azure Blob Upload Test (Encrypted)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Azure Blob Upload (Encrypted)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #f2f2f2;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      max-width: 400px;
+      margin: 1rem 0;
+    }
+
+    button {
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #0078d4;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #005ea6;
+    }
+
+    #status {
+      margin-top: 1rem;
+      font-size: 1rem;
+      text-align: center;
+      max-width: 90%;
+      word-wrap: break-word;
+    }
+  </style>
 </head>
 <body>
-  <h1>🧪 Azure Blob Upload Test</h1>
+  <h1>📤 Azure Blob Upload</h1>
 
-  <input type="file" id="fileInput">
+  <input type="file" id="fileInput" />
   <button onclick="upload()">Upload</button>
   <p id="status">Waiting...</p>
 
   <script>
-    // 🔐 Encrypted values (base64 strings with unique IVs)
     const encryptedSecrets = {
       BLOB_BASE: {
         iv: "IaX1WYFpsTL4iLdvp9tZ/Q==",
@@ -29,10 +75,9 @@
       }
     };
 
-    // 🔑 Decrypt using the AES-256-CBC algorithm with a seed from the URL
     function decryptAES({ iv, data }, seed) {
       try {
-        const key = CryptoJS.enc.Utf8.parse(seed.padEnd(32, "0")); // pad to 256-bit key
+        const key = CryptoJS.enc.Utf8.parse(seed.padEnd(32, "0"));
         const decrypted = CryptoJS.AES.decrypt(data, key, {
           iv: CryptoJS.enc.Base64.parse(iv),
           mode: CryptoJS.mode.CBC,
@@ -44,22 +89,20 @@
       }
     }
 
-    // 🌐 Get seed from URL
     const urlParams = new URLSearchParams(window.location.search);
     const seed = urlParams.get("key");
 
     if (!seed) {
-      document.body.innerHTML = "❌ Missing or invalid 'key' parameter in URL.";
+      document.body.innerHTML = "<p style='text-align:center;color:red;'>❌ Missing or invalid 'key' parameter in URL.</p>";
       throw new Error("Missing decryption key");
     }
 
-    // 🔓 Decrypt secrets
     const BLOB_BASE = decryptAES(encryptedSecrets.BLOB_BASE, seed);
     const CONTAINER = decryptAES(encryptedSecrets.CONTAINER, seed);
     const SAS_TOKEN = decryptAES(encryptedSecrets.SAS_TOKEN, seed);
 
     if (!BLOB_BASE || !CONTAINER || !SAS_TOKEN) {
-      document.body.innerHTML = "❌ Failed to decrypt secrets. Check your key.";
+      document.body.innerHTML = "<p style='text-align:center;color:red;'>❌ Failed to decrypt secrets. Check your key.</p>";
       throw new Error("Decryption failed");
     }
 
@@ -80,17 +123,17 @@
         },
         body: file
       })
-      .then(res => {
-        if (res.ok) {
-          document.getElementById("status").textContent = "✅ Upload successful!";
-        } else {
-          document.getElementById("status").textContent = "❌ Upload failed. HTTP " + res.status;
-        }
-      })
-      .catch(err => {
-        console.error("Upload error:", err);
-        document.getElementById("status").textContent = "❌ Upload error in request.";
-      });
+        .then(res => {
+          if (res.ok) {
+            document.getElementById("status").textContent = "✅ Upload successful!";
+          } else {
+            document.getElementById("status").textContent = `❌ Upload failed. HTTP ${res.status}`;
+          }
+        })
+        .catch(err => {
+          console.error("Upload error:", err);
+          document.getElementById("status").textContent = "❌ Upload error in request.";
+        });
     }
   </script>
 </body>
