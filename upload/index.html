@@ -29,16 +29,8 @@
       padding: 0.5rem;
       border-radius: 6px;
       box-shadow: 0 0 3px #ccc;
-      width: 100px;
-      text-align: center;
     }
-    .file-box img {
-      max-width: 100%;
-      max-height: 75px;
-      object-fit: cover;
-      border-radius: 4px;
-    }
-    .file-box button.remove-btn {
+    .file-box button {
       position: absolute;
       top: -5px;
       right: -5px;
@@ -73,6 +65,7 @@
   <p id="status">Waiting...</p>
 
   <script>
+    // 🔐 Encrypted secrets
     const encryptedSecrets = {
       BLOB_BASE: {
         iv: "IaX1WYFpsTL4iLdvp9tZ/Q==",
@@ -84,10 +77,11 @@
       },
       SAS_TOKEN: {
         iv: "LEH3z+3TzBHaGaZmRLexFQ==",
-        data: "..."
+        data: "o6IDfYIUuCwqf5BUE829dyLo8dYgOGXHCkTqBBip5dLNcioLSuorxvaX5JNprJ4EruBs58zens0dR6BknMsn1wzgCB2nxdbrmnAf48yhNAmhQB11oUoqsdWWkGW8C+IPub9VDcW+z7k7bI637VFoy/7z6lo8yl6RSKgCUkZbMmrQi0eliovbLVALqPDJVLwpmZUfLSxTVKr47x9WHjDTFQ=="
       }
     };
 
+    // 🔓 Decrypt logic
     function decryptAES({ iv, data }, seed) {
       const key = CryptoJS.enc.Utf8.parse(seed.padEnd(32, "0"));
       const decrypted = CryptoJS.AES.decrypt(data, key, {
@@ -98,6 +92,7 @@
       return decrypted.toString(CryptoJS.enc.Utf8);
     }
 
+    // 🌐 Get decryption seed from URL
     const seed = new URLSearchParams(window.location.search).get("key");
     if (!seed) throw new Error("Missing 'key' in URL");
 
@@ -108,14 +103,13 @@
     if (!BLOB_BASE || !CONTAINER || !SAS_TOKEN) throw new Error("Decryption failed");
 
     let selectedFiles = [];
+
     const fileInput = document.getElementById("fileInput");
     const preview = document.getElementById("preview");
 
     fileInput.addEventListener("change", () => {
-      const newFiles = Array.from(fileInput.files);
-      selectedFiles.push(...newFiles);
+      selectedFiles = Array.from(fileInput.files);
       updatePreview();
-      fileInput.value = ""; // allow reselecting same file
     });
 
     function updatePreview() {
@@ -123,25 +117,10 @@
       selectedFiles.forEach((file, index) => {
         const box = document.createElement("div");
         box.className = "file-box";
-
-        const reader = new FileReader();
-        reader.onload = e => {
-          const img = document.createElement("img");
-          img.src = e.target.result;
-          box.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-
-        const removeBtn = document.createElement("button");
-        removeBtn.className = "remove-btn";
-        removeBtn.textContent = "×";
-        removeBtn.onclick = () => removeFile(index);
-        box.appendChild(removeBtn);
-
-        const label = document.createElement("div");
-        label.textContent = file.name;
-        box.appendChild(label);
-
+        box.innerHTML = `
+          <button onclick="removeFile(${index})">×</button>
+          <div>${file.name}</div>
+        `;
         preview.appendChild(box);
       });
     }
@@ -158,12 +137,11 @@
       }
 
       document.getElementById("status").textContent = "📡 Uploading...";
+      let completed = 0;
 
-      let remaining = selectedFiles.length;
-      const toUpload = [...selectedFiles];
-
-      toUpload.forEach((file) => {
+      selectedFiles.forEach(file => {
         const uploadUrl = `${BLOB_BASE.replace(/\/$/, "")}/${CONTAINER}/${encodeURIComponent(file.name)}?${SAS_TOKEN}`;
+
         fetch(uploadUrl, {
           method: "PUT",
           headers: {
@@ -173,21 +151,14 @@
           body: file
         })
         .then(res => {
-          if (res.ok) {
-            const index = selectedFiles.indexOf(file);
-            if (index !== -1) selectedFiles.splice(index, 1);
-            updatePreview();
-            remaining--;
-            if (remaining === 0) {
-              document.getElementById("status").textContent = "✅ All uploads complete!";
-            }
-          } else {
-            document.getElementById("status").textContent = `❌ Upload failed for ${file.name}`;
+          completed++;
+          if (completed === selectedFiles.length) {
+            document.getElementById("status").textContent = "✅ All uploads complete!";
           }
         })
         .catch(err => {
           console.error("Upload error:", err);
-          document.getElementById("status").textContent = `❌ Upload error for ${file.name}`;
+          document.getElementById("status").textContent = "❌ Error during upload.";
         });
       });
     }
