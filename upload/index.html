@@ -1,51 +1,96 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Secure Upload Demo</title>
+  <title>Azure Blob Upload Test (Encrypted)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
 <body>
-  <h1>🔐 Secure API Key Demo</h1>
-  <p>This static page decrypts a stored API key using a key passed in the URL.</p>
-  <p>Example URL: <code>?key=1a2b3C4d5E6f7G8h</code></p>
+  <h1>🧪 Azure Blob Upload Test</h1>
 
-  <div id="status">Decrypting...</div>
+  <input type="file" id="fileInput">
+  <button onclick="upload()">Upload</button>
+  <p id="status">Waiting...</p>
 
-  <!-- CryptoJS from CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script>
-    // Your encrypted API key from encrypt.js output
-    const encryptedApiKey = "xUlDaW6NtAn/uFMtjb7hPS3Pf3GxvKgsfo60sA9hFls=";
-
-    const params = new URLSearchParams(window.location.search);
-    const keyParam = params.get("key");
-    const statusEl = document.getElementById("status");
-
-    if (!keyParam || keyParam.length !== 16) {
-      console.error("❌ Missing or invalid 'key' parameter in URL.");
-      statusEl.textContent = "❌ Missing or invalid 'key' parameter in URL.";
-    } else {
-      try {
-        const key = CryptoJS.enc.Utf8.parse(keyParam);
-        const decrypted = CryptoJS.AES.decrypt(encryptedApiKey, key, {
-          mode: CryptoJS.mode.ECB,
-          padding: CryptoJS.pad.Pkcs7,
-        });
-
-        const apiKey = decrypted.toString(CryptoJS.enc.Utf8);
-
-        if (!apiKey) {
-          throw new Error("Failed to decrypt.");
-        }
-
-        console.log("🔓 Decrypted API Key:", apiKey);
-        statusEl.textContent = "✅ API Key decrypted (check console).";
-        
-        // You can now use `apiKey` for your API call
-      } catch (err) {
-        console.error("❌ Decryption error:", err);
-        statusEl.textContent = "❌ Decryption failed.";
+    // 🔐 Encrypted values (base64 strings with unique IVs)
+    const encryptedSecrets = {
+      BLOB_BASE: {
+        iv: "RPiCo3IlpLGC//9lHFdhQQ==",
+        data: "UN/lrYYCtO1l+RDGU3T+2Mr7KvkJk89Y43mS4WcGC7FK8ug+KzAXOVBhiUxNrxoZ6aVVVHRf89SmEzIwhWR0qYIy6agO9IJagiWDt7ys45a5cxefwKXFvwFSd7o9U6iXX/5SY+9i+FRGJ8Uj5xHLCQ=="
+      },
+      CONTAINER: {
+        iv: "hUZNClYt4QozjSMfB5mEgg==",
+        data: "sUl3rQ/ISNC7Gju2Q1FY/JEWq6/rsLrWAq9biJG+GorGWzPF5kUY5XNOKxj19nUb"
+      },
+      SAS_TOKEN: {
+        iv: "9dZeJQ0k0y6xR8gxVfdOQA==",
+        data: "lQCzy5R/sVp2TrBpc63tZHEmEmS75pgRBbqJ/BIINYRdrAAuVl+o5IKQBdOTHyKzXGkwjIYGvGKf5M1EGcid3JcP2in4qUkqdknzF3GvIIFmHIw2ub0NKdZB1+olYGSGIEZzNxd3EMGh6A8ATt2IdKuWPdnohykOyWswfuAtHqMmflSfC+PMj8TEO+0zNCChGpV2azUGHRtKn2bfQV46XXy+csep4T5x+nZRUjgdqcgwZbfsgfRLRit4iwwvZ7i5"
       }
+    };
+
+    // 🔑 Decrypt using the AES-256-CBC algorithm with a seed from the URL
+    function decryptAES({ iv, data }, seed) {
+      try {
+        const key = CryptoJS.enc.Utf8.parse(seed.padEnd(32, "0")); // pad to 256-bit key
+        const decrypted = CryptoJS.AES.decrypt(data, key, {
+          iv: CryptoJS.enc.Base64.parse(iv),
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7
+        });
+        return decrypted.toString(CryptoJS.enc.Utf8);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // 🌐 Get seed from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const seed = urlParams.get("key");
+
+    if (!seed) {
+      document.body.innerHTML = "❌ Missing or invalid 'key' parameter in URL.";
+      throw new Error("Missing decryption key");
+    }
+
+    // 🔓 Decrypt secrets
+    const BLOB_BASE = decryptAES(encryptedSecrets.BLOB_BASE, seed);
+    const CONTAINER = decryptAES(encryptedSecrets.CONTAINER, seed);
+    const SAS_TOKEN = decryptAES(encryptedSecrets.SAS_TOKEN, seed);
+
+    if (!BLOB_BASE || !CONTAINER || !SAS_TOKEN) {
+      document.body.innerHTML = "❌ Failed to decrypt secrets. Check your key.";
+      throw new Error("Decryption failed");
+    }
+
+    function upload() {
+      const file = document.getElementById("fileInput").files[0];
+      if (!file) {
+        document.getElementById("status").textContent = "⚠️ No file selected.";
+        return;
+      }
+
+      const uploadUrl = `${BLOB_BASE.replace(/\/$/, "")}/${CONTAINER}/${encodeURIComponent(file.name)}?${SAS_TOKEN}`;
+
+      fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "x-ms-blob-type": "BlockBlob",
+          "Content-Type": file.type
+        },
+        body: file
+      })
+      .then(res => {
+        if (res.ok) {
+          document.getElementById("status").textContent = "✅ Upload successful!";
+        } else {
+          document.getElementById("status").textContent = "❌ Upload failed. HTTP " + res.status;
+        }
+      })
+      .catch(err => {
+        console.error("Upload error:", err);
+        document.getElementById("status").textContent = "❌ Upload error in request.";
+      });
     }
   </script>
 </body>
