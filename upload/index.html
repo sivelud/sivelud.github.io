@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Secure Upload Demo</title>
+</head>
+<body>
+  <h1>🔐 Secure API Key Demo</h1>
+  <p>This static page decrypts a stored API key using a key passed in the URL.</p>
+  <p>Example URL: <code>?key=1a2b3C4d5E6f7G8h</code></p>
+
+  <div id="status">Decrypting...</div>
+
+  <!-- CryptoJS from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script>
+    // Your encrypted API key from encrypt.js output
+    const encryptedApiKey = "xUlDaW6NtAn/uFMtjb7hPS3Pf3GxvKgsfo60sA9hFls=";
+
+    const params = new URLSearchParams(window.location.search);
+    const keyParam = params.get("key");
+    const statusEl = document.getElementById("status");
+
+    if (!keyParam || keyParam.length !== 16) {
+      console.error("❌ Missing or invalid 'key' parameter in URL.");
+      statusEl.textContent = "❌ Missing or invalid 'key' parameter in URL.";
+    } else {
+      try {
+        const key = CryptoJS.enc.Utf8.parse(keyParam);
+        const decrypted = CryptoJS.AES.decrypt(encryptedApiKey, key, {
+          mode: CryptoJS.mode.ECB,
+          padding: CryptoJS.pad.Pkcs7,
+        });
+
+        const apiKey = decrypted.toString(CryptoJS.enc.Utf8);
+
+        if (!apiKey) {
+          throw new Error("Failed to decrypt.");
+        }
+
+        console.log("🔓 Decrypted API Key:", apiKey);
+        statusEl.textContent = "✅ API Key decrypted (check console).";
+        
+        // You can now use `apiKey` for your API call
+      } catch (err) {
+        console.error("❌ Decryption error:", err);
+        statusEl.textContent = "❌ Decryption failed.";
+      }
+    }
+  </script>
+</body>
+</html>
