@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Azure Multi Upload</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Azure Multi Upload & Gallery</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <style>
     body {
@@ -11,18 +11,22 @@
       padding: 1rem;
       background: #f9f9f9;
     }
-    h1 {
+
+    h1, h2 {
       text-align: center;
     }
+
     input[type="file"] {
       margin: 1rem 0;
     }
+
     #preview {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
       margin-bottom: 1rem;
     }
+
     .file-box {
       position: relative;
       background: #fff;
@@ -30,6 +34,7 @@
       border-radius: 6px;
       box-shadow: 0 0 3px #ccc;
     }
+
     .file-box button {
       position: absolute;
       top: -5px;
@@ -43,6 +48,7 @@
       font-size: 12px;
       cursor: pointer;
     }
+
     button.upload {
       padding: 0.75rem 1.5rem;
       background: #0078d4;
@@ -51,18 +57,56 @@
       border-radius: 6px;
       cursor: pointer;
     }
-    #status {
+
+    #gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .thumb {
+      width: 200px;
+      height: auto;
+      max-height: 200px;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px #ccc;
+    }
+
+    .thumb:hover {
+      transform: scale(1.02);
+    }
+
+    #status, #statusGallery {
       margin-top: 1rem;
+      text-align: center;
+    }
+
+    button.load-more {
+      display: block;
+      margin: 1rem auto;
+      padding: 0.5rem 1rem;
+      font-size: 16px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>📤 Upload Your Photos</h1>
 
+  <h1>📤 Upload Your Photos</h1>
   <input type="file" id="fileInput" accept="image/*" multiple />
   <div id="preview"></div>
   <button class="upload" onclick="upload()">Upload</button>
   <p id="status">Waiting...</p>
+
+  <hr/>
+
+  <h2>📷 Gallery</h2>
+  <div id="gallery"></div>
+  <button class="load-more" onclick="loadMore()">🔄 Load More</button>
+  <p id="statusGallery"></p>
 
   <script>
     // 🔐 Encrypted secrets
@@ -81,7 +125,6 @@
       }
     };
 
-    // 🔓 Decrypt logic
     function decryptAES({ iv, data }, seed) {
       const key = CryptoJS.enc.Utf8.parse(seed.padEnd(32, "0"));
       const decrypted = CryptoJS.AES.decrypt(data, key, {
@@ -92,18 +135,16 @@
       return decrypted.toString(CryptoJS.enc.Utf8);
     }
 
-    // 🌐 Get decryption seed from URL
     const seed = new URLSearchParams(window.location.search).get("key");
     if (!seed) throw new Error("Missing 'key' in URL");
 
     const BLOB_BASE = decryptAES(encryptedSecrets.BLOB_BASE, seed);
     const CONTAINER = decryptAES(encryptedSecrets.CONTAINER, seed);
     const SAS_TOKEN = decryptAES(encryptedSecrets.SAS_TOKEN, seed);
+    const LIST_URL = `${BLOB_BASE}/${CONTAINER}?restype=container&comp=list&${SAS_TOKEN}`;
 
-    if (!BLOB_BASE || !CONTAINER || !SAS_TOKEN) throw new Error("Decryption failed");
-
+    // Upload logic
     let selectedFiles = [];
-
     const fileInput = document.getElementById("fileInput");
     const preview = document.getElementById("preview");
 
@@ -140,7 +181,9 @@
       let completed = 0;
 
       selectedFiles.forEach(file => {
-        const uploadUrl = `${BLOB_BASE.replace(/\/$/, "")}/${CONTAINER}/${encodeURIComponent(file.name)}?${SAS_TOKEN}`;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const uniqueName = `${timestamp}_${file.name}`;
+        const uploadUrl = `${BLOB_BASE.replace(/\/$/, "")}/${CONTAINER}/${encodeURIComponent(uniqueName)}?${SAS_TOKEN}`;
 
         fetch(uploadUrl, {
           method: "PUT",
@@ -154,6 +197,7 @@
           completed++;
           if (completed === selectedFiles.length) {
             document.getElementById("status").textContent = "✅ All uploads complete!";
+            fetchImageList(); // 🔁 Refresh gallery
           }
         })
         .catch(err => {
@@ -162,6 +206,57 @@
         });
       });
     }
+
+    // Gallery logic
+    let allImages = [];
+    let batchIndex = 0;
+    const BATCH_SIZE = 5;
+
+    async function fetchImageList() {
+      document.getElementById("statusGallery").textContent = "📡 Loading...";
+      try {
+        const res = await fetch(LIST_URL);
+        const text = await res.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, "application/xml");
+        const blobs = xml.getElementsByTagName("Blob");
+
+        allImages = [];
+        for (let blob of blobs) {
+          const name = blob.getElementsByTagName("Name")[0].textContent;
+          allImages.push(name);
+        }
+
+        allImages.sort((a, b) => b.localeCompare(a)); // Newest first
+
+        batchIndex = 0;
+        document.getElementById("gallery").innerHTML = "";
+        document.getElementById("statusGallery").textContent = "";
+        loadMore();
+      } catch (err) {
+        console.error("Failed to fetch blob list:", err);
+        document.getElementById("statusGallery").textContent = "❌ Failed to fetch blob list.";
+      }
+    }
+
+    function loadMore() {
+      const gallery = document.getElementById("gallery");
+      const next = allImages.slice(batchIndex, batchIndex + BATCH_SIZE);
+      next.forEach(name => {
+        const url = `${BLOB_BASE}/${CONTAINER}/${encodeURIComponent(name)}?${SAS_TOKEN}`;
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = name;
+        img.className = "thumb";
+        gallery.appendChild(img);
+      });
+      batchIndex += BATCH_SIZE;
+      if (batchIndex >= allImages.length) {
+        document.getElementById("statusGallery").textContent = "✅ All images loaded.";
+      }
+    }
+
+    fetchImageList();
   </script>
 </body>
 </html>
