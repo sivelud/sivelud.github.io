@@ -49,13 +49,15 @@
       cursor: pointer;
     }
 
-    button.upload {
+    button.upload, button.load-more {
       padding: 0.75rem 1.5rem;
       background: #0078d4;
       color: white;
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      display: block;
+      margin: 1rem auto;
     }
 
     #gallery {
@@ -82,14 +84,6 @@
     #status, #statusGallery {
       margin-top: 1rem;
       text-align: center;
-    }
-
-    button.load-more {
-      display: block;
-      margin: 1rem auto;
-      padding: 0.5rem 1rem;
-      font-size: 16px;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -178,7 +172,12 @@
       }
 
       document.getElementById("status").textContent = "📡 Uploading...";
+      const uploadBtn = document.querySelector("button.upload");
+      uploadBtn.disabled = true;
+      fileInput.disabled = true;
+
       let completed = 0;
+      let failed = false;
 
       selectedFiles.forEach(file => {
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -194,15 +193,26 @@
           body: file
         })
         .then(res => {
+          if (!res.ok) throw new Error("Upload failed");
           completed++;
-          if (completed === selectedFiles.length) {
+          if (completed === selectedFiles.length && !failed) {
             document.getElementById("status").textContent = "✅ All uploads complete!";
-            fetchImageList(); // 🔁 Refresh gallery
+            selectedFiles = [];
+            updatePreview();
+            fileInput.value = "";
+            fetchImageList(); // refresh gallery
           }
         })
         .catch(err => {
+          failed = true;
           console.error("Upload error:", err);
           document.getElementById("status").textContent = "❌ Error during upload.";
+        })
+        .finally(() => {
+          if (completed + (failed ? 1 : 0) >= selectedFiles.length) {
+            uploadBtn.disabled = false;
+            fileInput.disabled = false;
+          }
         });
       });
     }
@@ -210,7 +220,7 @@
     // Gallery logic
     let allImages = [];
     let batchIndex = 0;
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 10;
 
     async function fetchImageList() {
       document.getElementById("statusGallery").textContent = "📡 Loading...";
@@ -227,32 +237,45 @@
           allImages.push(name);
         }
 
-        allImages.sort((a, b) => b.localeCompare(a)); // Newest first
+        allImages.sort((a, b) => b.localeCompare(a)); // newest first
 
-        batchIndex = 0;
-        document.getElementById("gallery").innerHTML = "";
+        const gallery = document.getElementById("gallery");
+        gallery.innerHTML = "";
         document.getElementById("statusGallery").textContent = "";
-        loadMore();
+
+        if (allImages.length <= BATCH_SIZE) {
+          batchIndex = allImages.length;
+          allImages.forEach(name => addImageToGallery(name));
+          document.querySelector(".load-more").style.display = "none";
+        } else {
+          batchIndex = 0;
+          loadMore();
+          document.querySelector(".load-more").style.display = "block";
+        }
       } catch (err) {
         console.error("Failed to fetch blob list:", err);
         document.getElementById("statusGallery").textContent = "❌ Failed to fetch blob list.";
       }
     }
 
+    function addImageToGallery(name) {
+      const url = `${BLOB_BASE}/${CONTAINER}/${encodeURIComponent(name)}?${SAS_TOKEN}`;
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = name;
+      img.className = "thumb";
+      document.getElementById("gallery").appendChild(img);
+    }
+
     function loadMore() {
       const gallery = document.getElementById("gallery");
       const next = allImages.slice(batchIndex, batchIndex + BATCH_SIZE);
-      next.forEach(name => {
-        const url = `${BLOB_BASE}/${CONTAINER}/${encodeURIComponent(name)}?${SAS_TOKEN}`;
-        const img = document.createElement("img");
-        img.src = url;
-        img.alt = name;
-        img.className = "thumb";
-        gallery.appendChild(img);
-      });
+      next.forEach(name => addImageToGallery(name));
       batchIndex += BATCH_SIZE;
+
       if (batchIndex >= allImages.length) {
         document.getElementById("statusGallery").textContent = "✅ All images loaded.";
+        document.querySelector(".load-more").style.display = "none";
       }
     }
 
