@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Azure Multi Upload & Gallery</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: system-ui, sans-serif;
       padding: 1rem;
       background: #f9f9f9;
     }
+    
 
     h1, h2 {
       text-align: center;
@@ -51,7 +53,7 @@
 
     button.upload, button.load-more {
       padding: 0.75rem 1.5rem;
-      background: #0078d4;
+      background: #748DAE;
       color: white;
       border: none;
       border-radius: 6px;
@@ -59,6 +61,14 @@
       display: block;
       margin: 1rem auto;
     }
+
+    .fancy-title {
+      font-family: 'Dancing Script', cursive;
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
 
     #gallery {
       display: flex;
@@ -69,9 +79,9 @@
     }
 
     .thumb {
-      width: 200px;
+      width: 300px;
       height: auto;
-      max-height: 200px;
+      max-height: 300px;
       object-fit: contain;
       border-radius: 8px;
       box-shadow: 0 2px 5px #ccc;
@@ -79,6 +89,23 @@
 
     .thumb:hover {
       transform: scale(1.02);
+    }
+    
+
+    .custom-file-button {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      font-size: 1rem;
+      margin: 1rem auto;
+      display: block;
+      text-decoration: none;
+      /* transition: background 0.3s ease; */
     }
 
     #status, #statusGallery {
@@ -89,17 +116,18 @@
 </head>
 <body>
 
-  <h1>📤 Upload Your Photos</h1>
-  <input type="file" id="fileInput" accept="image/*" multiple />
+  <h1 class="fancy-title">📷 Bryllup i<br />Malangen</h1>
+  <input type="file" id="fileInput" accept="image/*" multiple hidden />
+<label for="fileInput" class="custom-file-button">Velg bilder</label>
   <div id="preview"></div>
-  <button class="upload" onclick="upload()">Upload</button>
-  <p id="status">Waiting...</p>
+  <button class="upload" onclick="upload()">Last opp ⬆️</button>
+  <p id="status"></p>
 
   <hr/>
 
-  <h2>📷 Gallery</h2>
+  <h2>Galleri:</h2>
   <div id="gallery"></div>
-  <button class="load-more" onclick="loadMore()">🔄 Load More</button>
+  <button class="load-more" onclick="loadMore()">Last inn mer ...</button>
   <p id="statusGallery"></p>
 
   <script>
@@ -167,11 +195,11 @@
 
     function upload() {
       if (selectedFiles.length === 0) {
-        document.getElementById("status").textContent = "⚠️ No files selected.";
+        document.getElementById("status").textContent = "⚠️ Ingen bilder valgt.";
         return;
       }
 
-      document.getElementById("status").textContent = "📡 Uploading...";
+      document.getElementById("status").textContent = "📡 Laster opp...";
       const uploadBtn = document.querySelector("button.upload");
       uploadBtn.disabled = true;
       fileInput.disabled = true;
@@ -196,7 +224,7 @@
           if (!res.ok) throw new Error("Upload failed");
           completed++;
           if (completed === selectedFiles.length && !failed) {
-            document.getElementById("status").textContent = "✅ All uploads complete!";
+            document.getElementById("status").textContent = "✅ Tusen takk!";
             selectedFiles = [];
             updatePreview();
             fileInput.value = "";
@@ -206,7 +234,7 @@
         .catch(err => {
           failed = true;
           console.error("Upload error:", err);
-          document.getElementById("status").textContent = "❌ Error during upload.";
+          document.getElementById("status").textContent = "❌ Feil under opplasting.";
         })
         .finally(() => {
           if (completed + (failed ? 1 : 0) >= selectedFiles.length) {
@@ -223,7 +251,7 @@
     const BATCH_SIZE = 10;
 
     async function fetchImageList() {
-      document.getElementById("statusGallery").textContent = "📡 Loading...";
+      document.getElementById("statusGallery").textContent = "📡 Laster...";
       try {
         const res = await fetch(LIST_URL);
         const text = await res.text();
@@ -254,7 +282,7 @@
         }
       } catch (err) {
         console.error("Failed to fetch blob list:", err);
-        document.getElementById("statusGallery").textContent = "❌ Failed to fetch blob list.";
+        document.getElementById("statusGallery").textContent = "❌ Feil ved innlasting av galleri.";
       }
     }
 
@@ -274,7 +302,7 @@
       batchIndex += BATCH_SIZE;
 
       if (batchIndex >= allImages.length) {
-        document.getElementById("statusGallery").textContent = "✅ All images loaded.";
+        document.getElementById("statusGallery").textContent = "✅ Alle bilder lastet inn.";
         document.querySelector(".load-more").style.display = "none";
       }
     }
